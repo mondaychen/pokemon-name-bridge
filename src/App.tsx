@@ -244,6 +244,7 @@ function ResultCard({ hit }: ResultCardProps): ReactElement {
   const artworkUrl = activeForm?.artworkUrl ?? entry.artworkUrl;
   const meta = activeForm?.meta ?? entry.meta;
   const stats = activeForm?.stats ?? entry.stats;
+  const types = activeForm?.types ?? [];
   const apiName = activeForm?.apiName ?? entry.apiName;
 
   return (
@@ -253,7 +254,12 @@ function ResultCard({ hit }: ResultCardProps): ReactElement {
     >
       <div className="art-slot" aria-hidden="true">
         {artworkUrl ? (
-          <img src={artworkUrl} alt="" loading="lazy" />
+          <img
+            className={entry.kind === "item" ? "item-art" : undefined}
+            src={artworkUrl}
+            alt=""
+            loading="lazy"
+          />
         ) : (
           <span>{config.shortLabel.slice(0, 2)}</span>
         )}
@@ -312,6 +318,8 @@ function ResultCard({ hit }: ResultCardProps): ReactElement {
 
         <p>{entry.summary}</p>
 
+        {types.length > 0 ? <TypeSprites types={types} /> : null}
+
         {meta.length > 0 ? (
           <div className="meta-row">
             {meta.map((item) => (
@@ -323,6 +331,23 @@ function ResultCard({ hit }: ResultCardProps): ReactElement {
         {stats ? <StatSpread stats={stats} /> : null}
       </div>
     </article>
+  );
+}
+
+interface TypeSpritesProps {
+  readonly types: NonNullable<SearchEntry["forms"]>[number]["types"];
+}
+
+function TypeSprites({ types }: TypeSpritesProps): ReactElement {
+  return (
+    <div className="type-sprites" aria-label="Pokemon types">
+      {types.map((type) => (
+        <span className="type-sprite" key={type.name} title={type.label}>
+          <img alt={type.label} src={type.iconUrl} loading="lazy" />
+          <span>{type.label}</span>
+        </span>
+      ))}
+    </div>
   );
 }
 

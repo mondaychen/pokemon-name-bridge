@@ -242,6 +242,12 @@ h1 {
   object-fit: contain;
 }
 
+.art-slot img.item-art {
+  width: 46px;
+  height: 46px;
+  image-rendering: auto;
+}
+
 .result-body {
   min-width: 0;
 }
@@ -336,6 +342,40 @@ dd {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+.type-sprites {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 12px;
+}
+
+.type-sprite {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 100px;
+  height: 22px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #e9eef5;
+}
+
+.type-sprite img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.type-sprite span {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }
 
 .meta-row span {
@@ -453,6 +493,11 @@ dd {
   .art-slot img {
     width: 64px;
     height: 64px;
+  }
+
+  .art-slot img.item-art {
+    width: 40px;
+    height: 40px;
   }
 
   .name-grid {

@@ -1,6 +1,7 @@
 import { RESOURCE_CONFIG_BY_KIND } from "../data/resources";
 import type {
   PokemonFormProfile,
+  PokemonTypeProfile,
   LocalizedNames,
   PokemonStat,
   ResourceKind,
@@ -10,7 +11,7 @@ import type {
 import { buildPinyinFields } from "./search";
 
 const API_ROOT = "https://pokeapi.co/api/v2";
-const CACHE_VERSION = "v3";
+const CACHE_VERSION = "v5";
 const CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 14;
 const CONCURRENCY = 8;
 
@@ -119,6 +120,9 @@ interface ItemDetail {
   readonly category: NamedApiResource;
   readonly attributes: readonly NamedApiResource[];
   readonly effect_entries?: readonly VerboseEffect[];
+  readonly sprites: {
+    readonly default: string | null;
+  };
 }
 
 interface AbilityDetail {
@@ -286,6 +290,7 @@ function toSearchEntry<K extends ResourceKind>(
         `Cost ${item.cost}`,
         ...item.attributes.slice(0, 2).map((attribute) => titleize(attribute.name)),
       ].filter(isPresent),
+      artworkUrl: item.sprites.default ?? undefined,
     };
   }
 
@@ -424,6 +429,7 @@ function toPokemonFormProfile(
     isDefault: variety.is_default,
     meta: [...pokemonFormMeta(core), ...speciesMeta(species)],
     stats: toPokemonStats(core.stats),
+    types: toPokemonTypes(core.types),
     artworkUrl: pokemonArtworkUrlFromCore(core),
   };
 }
@@ -512,12 +518,6 @@ function pokemonArtworkUrlFromCore(core: PokemonCoreDetail): string {
 
 function pokemonFormMeta(core: PokemonCoreDetail): readonly string[] {
   return [
-    core.types
-      .slice()
-      .sort((first, second) => first.slot - second.slot)
-      .map((slot) => titleize(slot.type.name))
-      .filter(isPresent)
-      .join(" / "),
     `${(core.height / 10).toFixed(1)} m`,
     `${(core.weight / 10).toFixed(1)} kg`,
     core.base_experience ? `Base XP ${core.base_experience}` : undefined,
@@ -564,6 +564,34 @@ function toPokemonStats(stats: readonly PokemonApiStat[]): readonly PokemonStat[
     label: labels[entry.stat.name] || titleize(entry.stat.name) || entry.stat.name,
     value: entry.base_stat,
   }));
+}
+
+function toPokemonTypes(
+  types: readonly PokemonTypeSlot[],
+): readonly PokemonTypeProfile[] {
+  return types
+    .slice()
+    .sort((first, second) => first.slot - second.slot)
+    .map((slot) => {
+      const id = resourceIdFromUrl(slot.type.url);
+      const label = titleize(slot.type.name) || slot.type.name;
+
+      return {
+        id,
+        name: slot.type.name,
+        label,
+        iconUrl: typeIconUrl(id),
+      };
+    });
+}
+
+function typeIconUrl(id: number): string {
+  return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/types/generation-viii/sword-shield/${id}.png`;
+}
+
+function resourceIdFromUrl(url: string): number {
+  const match = url.match(/\/(\d+)\/?$/);
+  return match ? Number(match[1]) : 0;
 }
 
 function cleanText(value: string): string {

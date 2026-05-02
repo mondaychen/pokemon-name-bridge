@@ -35,7 +35,15 @@ export interface PokemonFormProfile {
   readonly isDefault: boolean;
   readonly meta: readonly string[];
   readonly stats: readonly PokemonStat[];
+  readonly types: readonly PokemonTypeProfile[];
   readonly artworkUrl?: string;
+}
+
+export interface PokemonTypeProfile {
+  readonly id: number;
+  readonly name: string;
+  readonly label: string;
+  readonly iconUrl: string;
 }
 
 export interface PokemonStat {
