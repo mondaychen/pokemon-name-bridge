@@ -235,6 +235,16 @@ interface ResultCardProps {
 function ResultCard({ hit }: ResultCardProps): ReactElement {
   const { entry } = hit;
   const config = RESOURCE_CONFIG_BY_KIND[entry.kind];
+  const forms = entry.forms ?? [];
+  const [activeFormName, setActiveFormName] = useState(
+    forms.find((form) => form.isDefault)?.apiName ?? forms[0]?.apiName ?? "",
+  );
+  const activeForm =
+    forms.find((form) => form.apiName === activeFormName) ?? forms[0];
+  const artworkUrl = activeForm?.artworkUrl ?? entry.artworkUrl;
+  const meta = activeForm?.meta ?? entry.meta;
+  const stats = activeForm?.stats ?? entry.stats;
+  const apiName = activeForm?.apiName ?? entry.apiName;
 
   return (
     <article
@@ -242,8 +252,8 @@ function ResultCard({ hit }: ResultCardProps): ReactElement {
       style={{ "--accent": config.accent } as CSSProperties}
     >
       <div className="art-slot" aria-hidden="true">
-        {entry.artworkUrl ? (
-          <img src={entry.artworkUrl} alt="" loading="lazy" />
+        {artworkUrl ? (
+          <img src={artworkUrl} alt="" loading="lazy" />
         ) : (
           <span>{config.shortLabel.slice(0, 2)}</span>
         )}
@@ -257,6 +267,21 @@ function ResultCard({ hit }: ResultCardProps): ReactElement {
           </div>
           <span className="score-label">Score {hit.score}</span>
         </div>
+
+        {forms.length > 1 ? (
+          <div className="form-tabs" aria-label="Pokemon forms">
+            {forms.map((form) => (
+              <button
+                data-selected={form.apiName === activeForm?.apiName}
+                key={form.apiName}
+                type="button"
+                onClick={() => setActiveFormName(form.apiName)}
+              >
+                {form.label}
+              </button>
+            ))}
+          </div>
+        ) : null}
 
         <dl className="name-grid">
           <div>
@@ -281,21 +306,21 @@ function ResultCard({ hit }: ResultCardProps): ReactElement {
           </div>
           <div>
             <dt>API</dt>
-            <dd>{entry.apiName}</dd>
+            <dd>{apiName}</dd>
           </div>
         </dl>
 
         <p>{entry.summary}</p>
 
-        {entry.meta.length > 0 ? (
+        {meta.length > 0 ? (
           <div className="meta-row">
-            {entry.meta.map((item) => (
+            {meta.map((item) => (
               <span key={item}>{item}</span>
             ))}
           </div>
         ) : null}
 
-        {entry.stats ? <StatSpread stats={entry.stats} /> : null}
+        {stats ? <StatSpread stats={stats} /> : null}
       </div>
     </article>
   );

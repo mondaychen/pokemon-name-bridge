@@ -95,7 +95,34 @@ function scoreEntry(entry: SearchEntry, query: string): number {
     }
   }
 
+  for (const form of entry.forms ?? []) {
+    best = Math.max(best, scoreField(form.label, query, 72));
+    best = Math.max(best, scoreField(form.apiName, query, 70));
+  }
+
   return best;
+}
+
+function scoreField(field: string, query: string, weight: number): number {
+  const normalized = normalizeSearchText(field);
+
+  if (!normalized) {
+    return 0;
+  }
+
+  if (normalized === query) {
+    return weight + 35;
+  }
+
+  if (normalized.startsWith(query)) {
+    return weight + 20;
+  }
+
+  if (normalized.includes(query)) {
+    return weight;
+  }
+
+  return 0;
 }
 
 function compareEntries(first: SearchEntry, second: SearchEntry): number {

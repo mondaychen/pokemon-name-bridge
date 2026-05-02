@@ -1,5 +1,6 @@
 import { RESOURCE_CONFIG_BY_KIND } from "../data/resources";
 import type {
+  PokemonFormProfile,
   LocalizedNames,
   PokemonStat,
   ResourceKind,
@@ -9,7 +10,7 @@ import type {
 import { buildPinyinFields } from "./search";
 
 const API_ROOT = "https://pokeapi.co/api/v2";
-const CACHE_VERSION = "v2";
+const CACHE_VERSION = "v3";
 const CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 14;
 const CONCURRENCY = 8;
 
@@ -73,11 +74,22 @@ interface PokemonTypeSlot {
 }
 
 interface PokemonCoreDetail {
+  readonly id: number;
+  readonly name: string;
   readonly base_experience: number | null;
   readonly height: number;
   readonly weight: number;
   readonly stats: readonly PokemonApiStat[];
+  readonly sprites: PokemonSprites;
   readonly types: readonly PokemonTypeSlot[];
+}
+
+interface PokemonSprites {
+  readonly other?: {
+    readonly "official-artwork"?: {
+      readonly front_default: string | null;
+    };
+  };
 }
 
 interface PokemonApiStat {
@@ -171,11 +183,9 @@ export async function loadSearchIndex(
   let completed = 0;
   const entries = await mapConcurrent(results, CONCURRENCY, async (resource) => {
     const detail = await fetchJson<DetailByKind[typeof kind]>(resource.url);
-    const pokemonCore =
+    const pokemonForms =
       kind === "pokemon"
-        ? await fetchJson<PokemonCoreDetail>(
-            defaultPokemonUrl(detail as PokemonSpeciesDetail),
-          )
+        ? await loadPokemonForms(detail as PokemonSpeciesDetail)
         : undefined;
     completed += 1;
     onProgress({
@@ -184,7 +194,7 @@ export async function loadSearchIndex(
       total: results.length,
     });
 
-    return toSearchEntry(kind, detail, pokemonCore);
+    return toSearchEntry(kind, detail, pokemonForms);
   });
 
   const searchable = entries.filter((entry): entry is SearchEntry =>
@@ -212,7 +222,7 @@ export function clearSearchCache(): void {
 function toSearchEntry<K extends ResourceKind>(
   kind: K,
   detail: DetailByKind[K],
-  pokemonCore?: PokemonCoreDetail,
+  pokemonForms?: readonly PokemonFormProfile[],
 ): SearchEntry | undefined {
   const names = getLocalizedNames(detail.names, detail.name);
   const pinyinFields = buildPinyinFields(
@@ -229,6 +239,7 @@ function toSearchEntry<K extends ResourceKind>(
 
   if (kind === "pokemon") {
     const pokemon = detail as PokemonSpeciesDetail;
+    const defaultForm = pokemonForms?.find((form) => form.isDefault) ?? pokemonForms?.[0];
     return {
       ...common,
       summary: cleanText(
@@ -236,24 +247,12 @@ function toSearchEntry<K extends ResourceKind>(
           firstGenusText(pokemon.genera, "en") ||
           "Pokemon species",
       ),
-      meta: [
-        pokemonCore?.types
-          .slice()
-          .sort((first, second) => first.slot - second.slot)
-          .map((slot) => titleize(slot.type.name))
-          .filter(isPresent)
-          .join(" / "),
-        pokemonCore ? `${(pokemonCore.height / 10).toFixed(1)} m` : undefined,
-        pokemonCore ? `${(pokemonCore.weight / 10).toFixed(1)} kg` : undefined,
-        pokemonCore?.base_experience
-          ? `Base XP ${pokemonCore.base_experience}`
-          : undefined,
-        titleize(pokemon.generation?.name),
-        titleize(pokemon.color?.name),
-        pokemon.habitat ? titleize(pokemon.habitat.name) : undefined,
-      ].filter(isPresent),
-      stats: pokemonCore ? toPokemonStats(pokemonCore.stats) : undefined,
-      artworkUrl: pokemonArtworkUrl(pokemon.id),
+      meta:
+        defaultForm?.meta ??
+        speciesMeta(pokemon),
+      forms: pokemonForms,
+      stats: defaultForm?.stats,
+      artworkUrl: defaultForm?.artworkUrl ?? pokemonArtworkUrl(pokemon.id),
     };
   }
 
@@ -382,6 +381,53 @@ function filterList(
   return resources.filter((resource) => !excludedTypes.has(resource.name));
 }
 
+async function loadPokemonForms(
+  species: PokemonSpeciesDetail,
+): Promise<readonly PokemonFormProfile[]> {
+  const varieties =
+    species.varieties && species.varieties.length > 0
+      ? species.varieties
+      : [
+          {
+            is_default: true,
+            pokemon: {
+              name: species.name,
+              url: `${API_ROOT}/pokemon/${species.id}`,
+            },
+          },
+        ];
+  const sorted = varieties.slice().sort((first, second) => {
+    if (first.is_default !== second.is_default) {
+      return first.is_default ? -1 : 1;
+    }
+
+    return first.pokemon.name.localeCompare(second.pokemon.name);
+  });
+
+  return Promise.all(
+    sorted.map(async (variety) => {
+      const core = await fetchJson<PokemonCoreDetail>(variety.pokemon.url);
+      return toPokemonFormProfile(species, variety, core);
+    }),
+  );
+}
+
+function toPokemonFormProfile(
+  species: PokemonSpeciesDetail,
+  variety: PokemonVariety,
+  core: PokemonCoreDetail,
+): PokemonFormProfile {
+  return {
+    id: core.id,
+    apiName: core.name,
+    label: formDisplayName(species.name, variety.pokemon.name, variety.is_default),
+    isDefault: variety.is_default,
+    meta: [...pokemonFormMeta(core), ...speciesMeta(species)],
+    stats: toPokemonStats(core.stats),
+    artworkUrl: pokemonArtworkUrlFromCore(core),
+  };
+}
+
 async function mapConcurrent<Input, Output>(
   items: readonly Input[],
   concurrency: number,
@@ -457,11 +503,50 @@ function pokemonArtworkUrl(id: number): string {
   return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${id}.png`;
 }
 
-function defaultPokemonUrl(species: PokemonSpeciesDetail): string {
+function pokemonArtworkUrlFromCore(core: PokemonCoreDetail): string {
   return (
-    species.varieties?.find((variety) => variety.is_default)?.pokemon.url ||
-    `${API_ROOT}/pokemon/${species.id}`
+    core.sprites.other?.["official-artwork"]?.front_default ??
+    pokemonArtworkUrl(core.id)
   );
+}
+
+function pokemonFormMeta(core: PokemonCoreDetail): readonly string[] {
+  return [
+    core.types
+      .slice()
+      .sort((first, second) => first.slot - second.slot)
+      .map((slot) => titleize(slot.type.name))
+      .filter(isPresent)
+      .join(" / "),
+    `${(core.height / 10).toFixed(1)} m`,
+    `${(core.weight / 10).toFixed(1)} kg`,
+    core.base_experience ? `Base XP ${core.base_experience}` : undefined,
+  ].filter(isPresent);
+}
+
+function speciesMeta(species: PokemonSpeciesDetail): readonly string[] {
+  return [
+    titleize(species.generation?.name),
+    titleize(species.color?.name),
+    species.habitat ? titleize(species.habitat.name) : undefined,
+  ].filter(isPresent);
+}
+
+function formDisplayName(
+  speciesName: string,
+  formName: string,
+  isDefault: boolean,
+): string {
+  if (isDefault || formName === speciesName) {
+    return "Default";
+  }
+
+  const prefix = `${speciesName}-`;
+  const formOnly = formName.startsWith(prefix)
+    ? formName.slice(prefix.length)
+    : formName;
+
+  return titleize(formOnly) || titleize(formName) || formName;
 }
 
 function toPokemonStats(stats: readonly PokemonApiStat[]): readonly PokemonStat[] {

@@ -23,7 +23,18 @@ export interface SearchEntry extends LocalizedNames {
   readonly pinyinCompact: string;
   readonly summary: string;
   readonly meta: readonly string[];
+  readonly forms?: readonly PokemonFormProfile[];
   readonly stats?: readonly PokemonStat[];
+  readonly artworkUrl?: string;
+}
+
+export interface PokemonFormProfile {
+  readonly id: number;
+  readonly apiName: string;
+  readonly label: string;
+  readonly isDefault: boolean;
+  readonly meta: readonly string[];
+  readonly stats: readonly PokemonStat[];
   readonly artworkUrl?: string;
 }
 
