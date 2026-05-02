@@ -294,9 +294,55 @@ function ResultCard({ hit }: ResultCardProps): ReactElement {
             ))}
           </div>
         ) : null}
+
+        {entry.stats ? <StatSpread stats={entry.stats} /> : null}
       </div>
     </article>
   );
+}
+
+interface StatSpreadProps {
+  readonly stats: NonNullable<SearchEntry["stats"]>;
+}
+
+function StatSpread({ stats }: StatSpreadProps): ReactElement {
+  const total = stats.reduce((sum, stat) => sum + stat.value, 0);
+  const maxStat = Math.max(...stats.map((stat) => stat.value), 150);
+
+  return (
+    <section className="stat-spread" aria-label="Base stat spread">
+      <div className="stat-total">
+        <strong>Base stats</strong>
+        <span>Total {total}</span>
+      </div>
+      <div className="stat-list">
+        {stats.map((stat) => (
+          <div className="stat-row" key={stat.key}>
+            <span className="stat-label">{stat.label}</span>
+            <div className="stat-meter" aria-hidden="true">
+              <span
+                style={
+                  {
+                    "--stat-color": statColor(stat.value),
+                    width: `${(stat.value / maxStat) * 100}%`,
+                  } as CSSProperties
+                }
+              />
+            </div>
+            <span className="stat-value">{stat.value}</span>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function statColor(value: number): string {
+  const clamped = Math.min(120, Math.max(30, value));
+  const ratio = (clamped - 30) / 90;
+  const hue = Math.round(ratio * 120);
+
+  return `hsl(${hue} 72% 45%)`;
 }
 
 function statusText(state: ResourceLoadState): string {

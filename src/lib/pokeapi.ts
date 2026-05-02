@@ -1,6 +1,7 @@
 import { RESOURCE_CONFIG_BY_KIND } from "../data/resources";
 import type {
   LocalizedNames,
+  PokemonStat,
   ResourceKind,
   ResourceLoadState,
   SearchEntry,
@@ -8,7 +9,7 @@ import type {
 import { buildPinyinFields } from "./search";
 
 const API_ROOT = "https://pokeapi.co/api/v2";
-const CACHE_VERSION = "v1";
+const CACHE_VERSION = "v2";
 const CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 14;
 const CONCURRENCY = 8;
 
@@ -75,7 +76,13 @@ interface PokemonCoreDetail {
   readonly base_experience: number | null;
   readonly height: number;
   readonly weight: number;
+  readonly stats: readonly PokemonApiStat[];
   readonly types: readonly PokemonTypeSlot[];
+}
+
+interface PokemonApiStat {
+  readonly base_stat: number;
+  readonly stat: NamedApiResource;
 }
 
 interface MoveDetail {
@@ -245,6 +252,7 @@ function toSearchEntry<K extends ResourceKind>(
         titleize(pokemon.color?.name),
         pokemon.habitat ? titleize(pokemon.habitat.name) : undefined,
       ].filter(isPresent),
+      stats: pokemonCore ? toPokemonStats(pokemonCore.stats) : undefined,
       artworkUrl: pokemonArtworkUrl(pokemon.id),
     };
   }
@@ -454,6 +462,23 @@ function defaultPokemonUrl(species: PokemonSpeciesDetail): string {
     species.varieties?.find((variety) => variety.is_default)?.pokemon.url ||
     `${API_ROOT}/pokemon/${species.id}`
   );
+}
+
+function toPokemonStats(stats: readonly PokemonApiStat[]): readonly PokemonStat[] {
+  const labels: Record<string, string> = {
+    hp: "HP",
+    attack: "Atk",
+    defense: "Def",
+    "special-attack": "SpA",
+    "special-defense": "SpD",
+    speed: "Spe",
+  };
+
+  return stats.map((entry) => ({
+    key: entry.stat.name,
+    label: labels[entry.stat.name] || titleize(entry.stat.name) || entry.stat.name,
+    value: entry.base_stat,
+  }));
 }
 
 function cleanText(value: string): string {
