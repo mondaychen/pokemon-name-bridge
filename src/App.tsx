@@ -244,8 +244,9 @@ function ResultCard({ hit }: ResultCardProps): ReactElement {
   const artworkUrl = activeForm?.artworkUrl ?? entry.artworkUrl;
   const meta = activeForm?.meta ?? entry.meta;
   const stats = activeForm?.stats ?? entry.stats;
-  const types = activeForm?.types ?? [];
+  const types = activeForm?.types ?? entry.types ?? [];
   const apiName = activeForm?.apiName ?? entry.apiName;
+  const placeholderText = placeholderLabel(entry, config.shortLabel);
 
   return (
     <article
@@ -261,8 +262,16 @@ function ResultCard({ hit }: ResultCardProps): ReactElement {
             loading="lazy"
           />
         ) : (
-          <span>{config.shortLabel.slice(0, 2)}</span>
+          <span>{placeholderText}</span>
         )}
+        {entry.moveCategory?.iconUrl ? (
+          <img
+            className="art-badge"
+            src={entry.moveCategory.iconUrl}
+            alt={entry.moveCategory.label}
+            loading="lazy"
+          />
+        ) : null}
       </div>
 
       <div className="result-body">
@@ -318,7 +327,12 @@ function ResultCard({ hit }: ResultCardProps): ReactElement {
 
         <p>{entry.summary}</p>
 
-        {types.length > 0 ? <TypeSprites types={types} /> : null}
+        {types.length > 0 || entry.moveCategory ? (
+          <IconBadges
+            moveCategory={entry.kind === "move" ? undefined : entry.moveCategory}
+            types={types}
+          />
+        ) : null}
 
         {meta.length > 0 ? (
           <div className="meta-row">
@@ -334,19 +348,37 @@ function ResultCard({ hit }: ResultCardProps): ReactElement {
   );
 }
 
-interface TypeSpritesProps {
+function placeholderLabel(entry: SearchEntry, fallback: string): string {
+  if (
+    (entry.kind === "move" || entry.kind === "ability") &&
+    entry.chineseSimplified
+  ) {
+    return Array.from(entry.chineseSimplified)[0] ?? fallback.slice(0, 2);
+  }
+
+  return fallback.slice(0, 2);
+}
+
+interface IconBadgesProps {
+  readonly moveCategory: SearchEntry["moveCategory"];
   readonly types: NonNullable<SearchEntry["forms"]>[number]["types"];
 }
 
-function TypeSprites({ types }: TypeSpritesProps): ReactElement {
+function IconBadges({ moveCategory, types }: IconBadgesProps): ReactElement {
   return (
-    <div className="type-sprites" aria-label="Pokemon types">
+    <div className="icon-badges" aria-label="Type and move category">
       {types.map((type) => (
-        <span className="type-sprite" key={type.name} title={type.label}>
+        <span className="type-icon" key={type.name} title={type.label}>
           <img alt={type.label} src={type.iconUrl} loading="lazy" />
           <span>{type.label}</span>
         </span>
       ))}
+      {moveCategory?.iconUrl ? (
+        <span className="move-category-icon" title={moveCategory.label}>
+          <img alt={moveCategory.label} src={moveCategory.iconUrl} loading="lazy" />
+          <span>{moveCategory.label}</span>
+        </span>
+      ) : null}
     </div>
   );
 }

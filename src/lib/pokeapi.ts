@@ -1,5 +1,6 @@
 import { RESOURCE_CONFIG_BY_KIND } from "../data/resources";
 import type {
+  MoveCategoryProfile,
   PokemonFormProfile,
   PokemonTypeProfile,
   LocalizedNames,
@@ -11,9 +12,43 @@ import type {
 import { buildPinyinFields } from "./search";
 
 const API_ROOT = "https://pokeapi.co/api/v2";
-const CACHE_VERSION = "v5";
+const CACHE_VERSION = "v6";
 const CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 14;
 const CONCURRENCY = 8;
+const TYPE_ICON_URL_BY_ID: Readonly<Record<number, string>> = {
+  1: new URL("../../docs/design/icons/types/1.png", import.meta.url).href,
+  2: new URL("../../docs/design/icons/types/2.png", import.meta.url).href,
+  3: new URL("../../docs/design/icons/types/Pokemon 3 Sprite.png", import.meta.url).href,
+  4: new URL("../../docs/design/icons/types/Pokemon 4 Sprite.png", import.meta.url).href,
+  5: new URL("../../docs/design/icons/types/5.png", import.meta.url).href,
+  6: new URL("../../docs/design/icons/types/6.png", import.meta.url).href,
+  7: new URL("../../docs/design/icons/types/7.png", import.meta.url).href,
+  8: new URL("../../docs/design/icons/types/PokeAPI Sprite 8.png", import.meta.url).href,
+  9: new URL("../../docs/design/icons/types/PokeAPI Sprite 9.png", import.meta.url).href,
+  10: new URL("../../docs/design/icons/types/Pokemon 10 sprite.png", import.meta.url).href,
+  11: new URL("../../docs/design/icons/types/Scarlet Violet Sprite 11.png", import.meta.url).href,
+  12: new URL("../../docs/design/icons/types/Pokemon 12 Sprite.png", import.meta.url).href,
+  13: new URL("../../docs/design/icons/types/Scarlet Violet Sprite 13.png", import.meta.url).href,
+  14: new URL("../../docs/design/icons/types/Scarlet Violet Sprite 14.png", import.meta.url).href,
+  15: new URL("../../docs/design/icons/types/Pokemon 15 sprite.png", import.meta.url).href,
+  16: new URL("../../docs/design/icons/types/PokeAPI Sprite 16.png", import.meta.url).href,
+  17: new URL("../../docs/design/icons/types/PokeAPI Generation IX Sprite 17.png", import.meta.url).href,
+  18: new URL("../../docs/design/icons/types/Pokemon 18 Sprite.png", import.meta.url).href,
+};
+const MOVE_CATEGORY_ICON_URLS: Readonly<Record<string, string>> = {
+  physical: new URL(
+    "../../docs/design/icons/move-types/Masters Physical Moves Icon.png",
+    import.meta.url,
+  ).href,
+  special: new URL(
+    "../../docs/design/icons/move-types/Masters Special Moves Icon.png",
+    import.meta.url,
+  ).href,
+  status: new URL(
+    "../../docs/design/icons/move-types/Masters Status Moves Icon.png",
+    import.meta.url,
+  ).href,
+};
 
 type ProgressCallback = (state: ResourceLoadState) => void;
 
@@ -268,13 +303,13 @@ function toSearchEntry<K extends ResourceKind>(
         firstEffectText(move.effect_entries) ||
         `${titleize(move.type.name)} ${titleize(move.damage_class.name)} move`,
       meta: [
-        titleize(move.type.name),
-        titleize(move.damage_class.name),
         move.power === null ? undefined : `Power ${move.power}`,
         move.accuracy === null ? undefined : `Acc ${move.accuracy}`,
         `PP ${move.pp}`,
         move.priority === 0 ? undefined : `Priority ${move.priority}`,
       ].filter(isPresent),
+      moveCategory: toMoveCategory(move.damage_class),
+      types: [toPokemonType(move.type)],
     };
   }
 
@@ -310,6 +345,10 @@ function toSearchEntry<K extends ResourceKind>(
   }
 
   const type = detail as TypeDetail;
+  const typeProfile = toPokemonType({
+    name: type.name,
+    url: `${API_ROOT}/type/${type.id}/`,
+  });
   return {
     ...common,
     summary: `${type.pokemon.length} Pokemon and ${type.moves.length} moves use this type.`,
@@ -320,6 +359,8 @@ function toSearchEntry<K extends ResourceKind>(
       `${type.pokemon.length} Pokemon`,
       `${type.moves.length} moves`,
     ],
+    artworkUrl: typeProfile.iconUrl,
+    types: [typeProfile],
   };
 }
 
@@ -572,21 +613,34 @@ function toPokemonTypes(
   return types
     .slice()
     .sort((first, second) => first.slot - second.slot)
-    .map((slot) => {
-      const id = resourceIdFromUrl(slot.type.url);
-      const label = titleize(slot.type.name) || slot.type.name;
+    .map((slot) => toPokemonType(slot.type));
+}
 
-      return {
-        id,
-        name: slot.type.name,
-        label,
-        iconUrl: typeIconUrl(id),
-      };
-    });
+function toPokemonType(type: NamedApiResource): PokemonTypeProfile {
+  const id = resourceIdFromUrl(type.url);
+  const label = titleize(type.name) || type.name;
+
+  return {
+    id,
+    name: type.name,
+    label,
+    iconUrl: typeIconUrl(id),
+  };
 }
 
 function typeIconUrl(id: number): string {
-  return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/types/generation-viii/sword-shield/${id}.png`;
+  return (
+    TYPE_ICON_URL_BY_ID[id] ??
+    `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/types/generation-viii/sword-shield/${id}.png`
+  );
+}
+
+function toMoveCategory(category: NamedApiResource): MoveCategoryProfile {
+  return {
+    name: category.name,
+    label: titleize(category.name) || category.name,
+    iconUrl: MOVE_CATEGORY_ICON_URLS[category.name] ?? "",
+  };
 }
 
 function resourceIdFromUrl(url: string): number {

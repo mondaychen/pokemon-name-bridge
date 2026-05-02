@@ -24,7 +24,9 @@ export interface SearchEntry extends LocalizedNames {
   readonly summary: string;
   readonly meta: readonly string[];
   readonly forms?: readonly PokemonFormProfile[];
+  readonly moveCategory?: MoveCategoryProfile;
   readonly stats?: readonly PokemonStat[];
+  readonly types?: readonly PokemonTypeProfile[];
   readonly artworkUrl?: string;
 }
 
@@ -41,6 +43,12 @@ export interface PokemonFormProfile {
 
 export interface PokemonTypeProfile {
   readonly id: number;
+  readonly name: string;
+  readonly label: string;
+  readonly iconUrl: string;
+}
+
+export interface MoveCategoryProfile {
   readonly name: string;
   readonly label: string;
   readonly iconUrl: string;
