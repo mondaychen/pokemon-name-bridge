@@ -15,6 +15,9 @@ const API_ROOT = "https://pokeapi.co/api/v2";
 const CACHE_VERSION = "v6";
 const CACHE_TTL_MS = 1000 * 60 * 60 * 24 * 14;
 const CONCURRENCY = 8;
+const CACHE_DB_NAME = "poke-translate";
+const CACHE_DB_VERSION = 1;
+const CACHE_STORE_NAME = "search-indexes";
 const TYPE_ICON_URL_BY_ID: Readonly<Record<number, string>> = {
   1: new URL("../../docs/design/icons/types/1.png", import.meta.url).href,
   2: new URL("../../docs/design/icons/types/2.png", import.meta.url).href,
@@ -197,7 +200,7 @@ export async function loadSearchIndex(
   kind: ResourceKind,
   onProgress: ProgressCallback,
 ): Promise<readonly SearchEntry[]> {
-  const cached = readCache(kind);
+  const cached = await readCache(kind);
 
   if (cached) {
     onProgress({
@@ -240,7 +243,7 @@ export async function loadSearchIndex(
     Boolean(entry),
   );
 
-  writeCache(kind, searchable);
+  await writeCache(kind, searchable);
 
   onProgress({
     status: "ready",
@@ -252,10 +255,9 @@ export async function loadSearchIndex(
   return searchable;
 }
 
-export function clearSearchCache(): void {
-  for (const kind of Object.keys(RESOURCE_CONFIG_BY_KIND) as ResourceKind[]) {
-    window.localStorage.removeItem(cacheKey(kind));
-  }
+export async function clearSearchCache(): Promise<void> {
+  await clearIndexedCache();
+  clearLegacyLocalStorageCache();
 }
 
 function toSearchEntry<K extends ResourceKind>(
@@ -508,15 +510,14 @@ async function fetchJson<T>(url: string): Promise<T> {
   return (await response.json()) as T;
 }
 
-function readCache(kind: ResourceKind): readonly SearchEntry[] | undefined {
+async function readCache(kind: ResourceKind): Promise<readonly SearchEntry[] | undefined> {
   try {
-    const raw = window.localStorage.getItem(cacheKey(kind));
+    const parsed = await getCachedEnvelope(kind);
 
-    if (!raw) {
+    if (!parsed) {
       return undefined;
     }
 
-    const parsed = JSON.parse(raw) as CacheEnvelope;
     const isFresh =
       parsed.version === CACHE_VERSION &&
       Date.now() - parsed.savedAt < CACHE_TTL_MS &&
@@ -528,7 +529,10 @@ function readCache(kind: ResourceKind): readonly SearchEntry[] | undefined {
   }
 }
 
-function writeCache(kind: ResourceKind, entries: readonly SearchEntry[]): void {
+async function writeCache(
+  kind: ResourceKind,
+  entries: readonly SearchEntry[],
+): Promise<void> {
   const envelope: CacheEnvelope = {
     version: CACHE_VERSION,
     savedAt: Date.now(),
@@ -536,7 +540,7 @@ function writeCache(kind: ResourceKind, entries: readonly SearchEntry[]): void {
   };
 
   try {
-    window.localStorage.setItem(cacheKey(kind), JSON.stringify(envelope));
+    await setCachedEnvelope(kind, envelope);
   } catch {
     // Search still works without cache; quota and privacy settings vary by browser.
   }
@@ -544,6 +548,76 @@ function writeCache(kind: ResourceKind, entries: readonly SearchEntry[]): void {
 
 function cacheKey(kind: ResourceKind): string {
   return `poke-translate:${CACHE_VERSION}:${kind}`;
+}
+
+async function getCachedEnvelope(
+  kind: ResourceKind,
+): Promise<CacheEnvelope | undefined> {
+  return withCacheStore("readonly", (store) => store.get(cacheKey(kind)));
+}
+
+async function setCachedEnvelope(
+  kind: ResourceKind,
+  envelope: CacheEnvelope,
+): Promise<void> {
+  await withCacheStore("readwrite", (store) => store.put(envelope, cacheKey(kind)));
+}
+
+async function clearIndexedCache(): Promise<void> {
+  await withCacheStore("readwrite", (store) => store.clear());
+}
+
+function withCacheStore<T>(
+  mode: IDBTransactionMode,
+  operation: (store: IDBObjectStore) => IDBRequest<T>,
+): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const dbRequest = window.indexedDB.open(CACHE_DB_NAME, CACHE_DB_VERSION);
+
+    dbRequest.onupgradeneeded = () => {
+      const db = dbRequest.result;
+
+      if (!db.objectStoreNames.contains(CACHE_STORE_NAME)) {
+        db.createObjectStore(CACHE_STORE_NAME);
+      }
+    };
+
+    dbRequest.onerror = () => reject(dbRequest.error);
+    dbRequest.onblocked = () =>
+      reject(new Error("IndexedDB cache upgrade is blocked."));
+    dbRequest.onsuccess = () => {
+      const db = dbRequest.result;
+      const transaction = db.transaction(CACHE_STORE_NAME, mode);
+      const store = transaction.objectStore(CACHE_STORE_NAME);
+      const request = operation(store);
+
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+      transaction.oncomplete = () => db.close();
+      transaction.onabort = () => {
+        db.close();
+        reject(transaction.error);
+      };
+      transaction.onerror = () => {
+        db.close();
+        reject(transaction.error);
+      };
+    };
+  });
+}
+
+function clearLegacyLocalStorageCache(): void {
+  try {
+    for (let index = window.localStorage.length - 1; index >= 0; index -= 1) {
+      const key = window.localStorage.key(index);
+
+      if (key?.startsWith("poke-translate:")) {
+        window.localStorage.removeItem(key);
+      }
+    }
+  } catch {
+    // Legacy cleanup is best effort only.
+  }
 }
 
 function pokemonArtworkUrl(id: number): string {

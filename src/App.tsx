@@ -120,8 +120,9 @@ export function App(): ReactElement {
   }
 
   function refreshData(): void {
-    clearSearchCache();
-    window.location.reload();
+    void clearSearchCache().finally(() => {
+      window.location.reload();
+    });
   }
 
   return (
