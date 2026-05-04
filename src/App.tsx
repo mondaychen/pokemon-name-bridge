@@ -247,6 +247,7 @@ function ResultCard({ hit }: ResultCardProps): ReactElement {
   const types = activeForm?.types ?? entry.types ?? [];
   const apiName = activeForm?.apiName ?? entry.apiName;
   const placeholderText = placeholderLabel(entry, config.shortLabel);
+  const wikiLinks = wikiLinksFor(entry);
 
   return (
     <article
@@ -342,6 +343,23 @@ function ResultCard({ hit }: ResultCardProps): ReactElement {
           </div>
         ) : null}
 
+        <div className="wiki-links" aria-label="Wiki links">
+          <a
+            href={wikiLinks.bulbapedia}
+            target="_blank"
+            rel="noreferrer"
+          >
+            Bulbapedia
+          </a>
+          <a
+            href={wikiLinks.chineseWiki}
+            target="_blank"
+            rel="noreferrer"
+          >
+            神奇寶貝百科
+          </a>
+        </div>
+
         {stats ? <StatSpread stats={stats} /> : null}
       </div>
     </article>
@@ -357,6 +375,44 @@ function placeholderLabel(entry: SearchEntry, fallback: string): string {
   }
 
   return fallback.slice(0, 2);
+}
+
+function wikiLinksFor(entry: SearchEntry): {
+  readonly bulbapedia: string;
+  readonly chineseWiki: string;
+} {
+  const chineseName =
+    entry.chineseSimplified || entry.chineseTraditional || entry.english;
+
+  return {
+    bulbapedia: bulbapediaUrl(entry),
+    chineseWiki: chineseWikiUrl(entry.kind, chineseName),
+  };
+}
+
+function bulbapediaUrl(entry: SearchEntry): string {
+  const title =
+    entry.kind === "move" ? `${entry.english} (move)` : entry.english;
+
+  return `https://bulbapedia.bulbagarden.net/wiki/${wikiPath(title)}`;
+}
+
+function chineseWikiUrl(kind: SearchEntry["kind"], chineseName: string): string {
+  const suffixByKind: Record<SearchEntry["kind"], string> = {
+    pokemon: "",
+    move: "（招式）",
+    item: "（道具）",
+    ability: "（特性）",
+    type: "（属性）",
+  };
+
+  return `https://wiki.52poke.com/wiki/${wikiPath(
+    `${chineseName}${suffixByKind[kind]}`,
+  )}`;
+}
+
+function wikiPath(title: string): string {
+  return encodeURIComponent(title.trim().replace(/\s+/g, "_"));
 }
 
 interface IconBadgesProps {
