@@ -133,9 +133,22 @@ export function App(): ReactElement {
             <p className="eyebrow">Pokemon name bridge</p>
             <h1 id="page-title">Search Chinese, pinyin, English, or Japanese</h1>
           </div>
-          <button className="ghost-button" type="button" onClick={refreshData}>
-            Refresh data
-          </button>
+          <div className="header-status">
+            <div className="status-grid">
+              {RESOURCE_CONFIGS.map((config) => (
+                <LoadStatus
+                  key={config.kind}
+                  label={config.label}
+                  state={states[config.kind]}
+                />
+              ))}
+            </div>
+            {totals.ready === RESOURCE_CONFIGS.length ? (
+              <button className="ghost-button" type="button" onClick={refreshData}>
+                Refresh data
+              </button>
+            ) : null}
+          </div>
         </div>
 
         <label className="search-box">
@@ -164,16 +177,6 @@ export function App(): ReactElement {
               <span>{config.label}</span>
               <small>{states[config.kind].loaded || "..."}</small>
             </button>
-          ))}
-        </div>
-
-        <div className="status-grid">
-          {RESOURCE_CONFIGS.map((config) => (
-            <LoadStatus
-              key={config.kind}
-              label={config.label}
-              state={states[config.kind]}
-            />
           ))}
         </div>
 
@@ -255,32 +258,30 @@ function ResultCard({ hit }: ResultCardProps): ReactElement {
       className="result-card"
       style={{ "--accent": config.accent } as CSSProperties}
     >
-      <div className="art-slot" aria-hidden="true">
-        {artworkUrl ? (
-          <img
-            className={entry.kind === "item" ? "item-art" : undefined}
-            src={artworkUrl}
-            alt=""
-            loading="lazy"
-          />
-        ) : (
-          <span>{placeholderText}</span>
-        )}
-        {entry.moveCategory?.iconUrl ? (
-          <img
-            className="art-badge"
-            src={entry.moveCategory.iconUrl}
-            alt={entry.moveCategory.label}
-            loading="lazy"
-          />
-        ) : null}
+      <div className="art-column" aria-hidden="true">
+        <div className="art-slot">
+          {artworkUrl ? (
+            <img
+              className={entry.kind === "item" ? "item-art" : undefined}
+              src={artworkUrl}
+              alt=""
+              loading="lazy"
+            />
+          ) : (
+            <span>{placeholderText}</span>
+          )}
+        </div>
+        {types.length > 0 ? <IconBadges types={types} /> : null}
       </div>
 
       <div className="result-body">
         <div className="result-heading">
           <div>
             <span className="kind-label">{config.shortLabel} #{entry.id}</span>
-            <h2>{entry.chineseSimplified || entry.english}</h2>
+            <div className="title-row">
+              <h2>{entry.chineseSimplified || entry.english}</h2>
+              <WikiLinks links={wikiLinks} />
+            </div>
           </div>
           <span className="score-label">Score {hit.score}</span>
         </div>
@@ -329,41 +330,46 @@ function ResultCard({ hit }: ResultCardProps): ReactElement {
 
         <p>{entry.summary}</p>
 
-        {types.length > 0 || entry.moveCategory ? (
-          <IconBadges
-            moveCategory={entry.kind === "move" ? undefined : entry.moveCategory}
-            types={types}
-          />
-        ) : null}
-
         {meta.length > 0 ? (
           <div className="meta-row">
+            {entry.moveCategory?.iconUrl ? (
+              <img
+                className="meta-move-category"
+                src={entry.moveCategory.iconUrl}
+                alt={entry.moveCategory.label}
+                title={entry.moveCategory.label}
+                loading="lazy"
+              />
+            ) : null}
             {meta.map((item) => (
               <span key={item}>{item}</span>
             ))}
           </div>
         ) : null}
 
-        <div className="wiki-links" aria-label="Wiki links">
-          <a
-            href={wikiLinks.bulbapedia}
-            target="_blank"
-            rel="noreferrer"
-          >
-            Bulbapedia
-          </a>
-          <a
-            href={wikiLinks.chineseWiki}
-            target="_blank"
-            rel="noreferrer"
-          >
-            神奇寶貝百科
-          </a>
-        </div>
-
         {stats ? <StatSpread stats={stats} /> : null}
       </div>
     </article>
+  );
+}
+
+interface WikiLinksProps {
+  readonly links: {
+    readonly bulbapedia: string;
+    readonly chineseWiki: string;
+  };
+}
+
+function WikiLinks({ links }: WikiLinksProps): ReactElement {
+  return (
+    <div className="wiki-links" aria-label="Wiki links">
+      <a href={links.bulbapedia} target="_blank" rel="noreferrer">
+        Bulbapedia
+      </a>
+      <a href={links.chineseWiki} target="_blank" rel="noreferrer">
+        神奇寶貝百科
+      </a>
+    </div>
   );
 }
 
@@ -417,25 +423,18 @@ function wikiPath(title: string): string {
 }
 
 interface IconBadgesProps {
-  readonly moveCategory: SearchEntry["moveCategory"];
   readonly types: NonNullable<SearchEntry["forms"]>[number]["types"];
 }
 
-function IconBadges({ moveCategory, types }: IconBadgesProps): ReactElement {
+function IconBadges({ types }: IconBadgesProps): ReactElement {
   return (
-    <div className="icon-badges" aria-label="Type and move category">
+    <div className="icon-badges" aria-label="Pokemon types">
       {types.map((type) => (
         <span className="type-icon" key={type.name} title={type.label}>
           <img alt={type.label} src={type.iconUrl} loading="lazy" />
           <span>{type.label}</span>
         </span>
       ))}
-      {moveCategory?.iconUrl ? (
-        <span className="move-category-icon" title={moveCategory.label}>
-          <img alt={moveCategory.label} src={moveCategory.iconUrl} loading="lazy" />
-          <span>{moveCategory.label}</span>
-        </span>
-      ) : null}
     </div>
   );
 }
