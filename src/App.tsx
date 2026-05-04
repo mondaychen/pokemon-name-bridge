@@ -304,27 +304,39 @@ function ResultCard({ hit }: ResultCardProps): ReactElement {
         <dl className="name-grid">
           <div>
             <dt>English</dt>
-            <dd>{entry.english}</dd>
+            <dd>
+              <CopyValue value={entry.english} />
+            </dd>
           </div>
           <div>
             <dt>Japanese</dt>
-            <dd>{entry.japanese || "Unknown"}</dd>
+            <dd>
+              <CopyValue value={entry.japanese || "Unknown"} />
+            </dd>
           </div>
           <div>
             <dt>Simplified</dt>
-            <dd>{entry.chineseSimplified || "Unknown"}</dd>
+            <dd>
+              <CopyValue value={entry.chineseSimplified || "Unknown"} />
+            </dd>
           </div>
           <div>
             <dt>Traditional</dt>
-            <dd>{entry.chineseTraditional || "Unknown"}</dd>
+            <dd>
+              <CopyValue value={entry.chineseTraditional || "Unknown"} />
+            </dd>
           </div>
           <div>
             <dt>Pinyin</dt>
-            <dd>{entry.pinyin || "Unknown"}</dd>
+            <dd>
+              <CopyValue value={entry.pinyin || "Unknown"} />
+            </dd>
           </div>
           <div>
             <dt>API</dt>
-            <dd>{apiName}</dd>
+            <dd>
+              <CopyValue value={apiName} />
+            </dd>
           </div>
         </dl>
 
@@ -351,6 +363,65 @@ function ResultCard({ hit }: ResultCardProps): ReactElement {
       </div>
     </article>
   );
+}
+
+interface CopyValueProps {
+  readonly value: string;
+}
+
+function CopyValue({ value }: CopyValueProps): ReactElement {
+  const [copied, setCopied] = useState(false);
+
+  async function copyValue(): Promise<void> {
+    await copyText(value);
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1100);
+  }
+
+  return (
+    <button
+      className="copy-value"
+      data-copied={copied}
+      title={`Copy ${value}`}
+      type="button"
+      onClick={() => void copyValue()}
+    >
+      <span>{value}</span>
+      {copied ? (
+        <small>Copied</small>
+      ) : (
+        <svg
+          aria-hidden="true"
+          className="copy-icon"
+          fill="none"
+          height="24"
+          viewBox="0 0 24 24"
+          width="24"
+          xmlns="http://www.w3.org/2000/svg"
+        >
+          <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+          <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+        </svg>
+      )}
+    </button>
+  );
+}
+
+async function copyText(value: string): Promise<void> {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(value);
+    return;
+  }
+
+  const textarea = document.createElement("textarea");
+  textarea.value = value;
+  textarea.setAttribute("readonly", "");
+  textarea.style.position = "fixed";
+  textarea.style.opacity = "0";
+  document.body.append(textarea);
+  textarea.select();
+  document.execCommand("copy");
+  textarea.remove();
 }
 
 interface WikiLinksProps {

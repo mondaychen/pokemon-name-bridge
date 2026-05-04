@@ -356,6 +356,63 @@ dd {
   overflow-wrap: anywhere;
 }
 
+.copy-value {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  min-height: 28px;
+  padding: 0;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  text-align: left;
+}
+
+.copy-value span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.copy-value small {
+  flex: 0 0 auto;
+  margin-left: 7px;
+  color: #64748b;
+  font-size: 0.68rem;
+  font-weight: 850;
+  opacity: 0;
+}
+
+.copy-icon {
+  flex: 0 0 auto;
+  width: 14px;
+  height: 14px;
+  margin-left: 7px;
+  color: #64748b;
+  opacity: 0;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
+.copy-value:hover small,
+.copy-value:focus-visible small,
+.copy-value[data-copied="true"] small,
+.copy-value:hover .copy-icon,
+.copy-value:focus-visible .copy-icon {
+  opacity: 1;
+}
+
+.copy-value[data-copied="true"] small {
+  color: #047857;
+}
+
+.copy-value:focus-visible {
+  border-radius: 6px;
+  outline: 2px solid rgba(37, 99, 235, 0.35);
+  outline-offset: 2px;
+}
+
 .result-body p {
   max-width: 88ch;
   margin: 0 0 12px;
