@@ -74,6 +74,21 @@ h1 {
   width: min(560px, 52%);
 }
 
+.header-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  width: 100%;
+}
+
+.header-total {
+  color: #53627a;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-align: right;
+}
+
 .ghost-button {
   min-height: 30px;
   padding: 0 10px;
@@ -594,6 +609,14 @@ dd {
   .header-status {
     justify-items: stretch;
     width: 100%;
+  }
+
+  .header-actions {
+    justify-content: space-between;
+  }
+
+  .header-total {
+    text-align: left;
   }
 
   .status-grid {

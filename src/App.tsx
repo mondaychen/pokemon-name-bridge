@@ -105,6 +105,12 @@ export function App(): ReactElement {
     return { ready, loaded, total };
   }, [states]);
 
+  const indexingSummary = `${totals.ready}/${RESOURCE_CONFIGS.length} categories ready${
+    totals.total > 0
+      ? `, ${totals.loaded.toLocaleString()}/${totals.total.toLocaleString()} records indexed`
+      : ""
+  }`;
+
   function toggleKind(kind: ResourceKind): void {
     setSelectedKinds((current) => {
       const next = new Set(current);
@@ -143,11 +149,14 @@ export function App(): ReactElement {
                 />
               ))}
             </div>
-            {totals.ready === RESOURCE_CONFIGS.length ? (
-              <button className="ghost-button" type="button" onClick={refreshData}>
-                Refresh data
-              </button>
-            ) : null}
+            <div className="header-actions">
+              <span className="header-total">{indexingSummary}</span>
+              {totals.ready === RESOURCE_CONFIGS.length ? (
+                <button className="ghost-button" type="button" onClick={refreshData}>
+                  Refresh data
+                </button>
+              ) : null}
+            </div>
           </div>
         </div>
 
@@ -182,12 +191,6 @@ export function App(): ReactElement {
 
         <div className="result-toolbar">
           <strong>{hits.length} matches</strong>
-          <span>
-            {totals.ready}/{RESOURCE_CONFIGS.length} categories ready
-            {totals.total > 0
-              ? `, ${totals.loaded.toLocaleString()}/${totals.total.toLocaleString()} records indexed`
-              : ""}
-          </span>
         </div>
 
         <section className="results" aria-live="polite">
