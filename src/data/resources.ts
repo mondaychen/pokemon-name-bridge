@@ -40,7 +40,6 @@ export const RESOURCE_CONFIGS: readonly ResourceConfig[] = [
 
 export const RESOURCE_ORDER = RESOURCE_CONFIGS.map((config) => config.kind);
 
-export const RESOURCE_CONFIG_BY_KIND: Record<ResourceKind, ResourceConfig> =
-  Object.fromEntries(
-    RESOURCE_CONFIGS.map((config) => [config.kind, config]),
-  ) as Record<ResourceKind, ResourceConfig>;
+export const RESOURCE_CONFIG_BY_KIND: Record<ResourceKind, ResourceConfig> = Object.fromEntries(
+  RESOURCE_CONFIGS.map((config) => [config.kind, config]),
+) as Record<ResourceKind, ResourceConfig>;

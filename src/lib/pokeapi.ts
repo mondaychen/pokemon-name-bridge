@@ -35,7 +35,8 @@ const TYPE_ICON_URL_BY_ID: Readonly<Record<number, string>> = {
   14: new URL("../../docs/design/icons/types/Scarlet Violet Sprite 14.png", import.meta.url).href,
   15: new URL("../../docs/design/icons/types/Pokemon 15 sprite.png", import.meta.url).href,
   16: new URL("../../docs/design/icons/types/PokeAPI Sprite 16.png", import.meta.url).href,
-  17: new URL("../../docs/design/icons/types/PokeAPI Generation IX Sprite 17.png", import.meta.url).href,
+  17: new URL("../../docs/design/icons/types/PokeAPI Generation IX Sprite 17.png", import.meta.url)
+    .href,
   18: new URL("../../docs/design/icons/types/Pokemon 18 Sprite.png", import.meta.url).href,
 };
 const MOVE_CATEGORY_ICON_URLS: Readonly<Record<string, string>> = {
@@ -215,9 +216,7 @@ export async function loadSearchIndex(
   onProgress({ status: "loading", loaded: 0, total: 0 });
 
   const config = RESOURCE_CONFIG_BY_KIND[kind];
-  const list = await fetchJson<NamedResourceList>(
-    `${API_ROOT}/${config.endpoint}?limit=20000`,
-  );
+  const list = await fetchJson<NamedResourceList>(`${API_ROOT}/${config.endpoint}?limit=20000`);
   const results = filterList(kind, list.results);
 
   onProgress({ status: "loading", loaded: 0, total: results.length });
@@ -226,9 +225,7 @@ export async function loadSearchIndex(
   const entries = await mapConcurrent(results, CONCURRENCY, async (resource) => {
     const detail = await fetchJson<DetailByKind[typeof kind]>(resource.url);
     const pokemonForms =
-      kind === "pokemon"
-        ? await loadPokemonForms(detail as PokemonSpeciesDetail)
-        : undefined;
+      kind === "pokemon" ? await loadPokemonForms(detail as PokemonSpeciesDetail) : undefined;
     completed += 1;
     onProgress({
       status: "loading",
@@ -239,9 +236,7 @@ export async function loadSearchIndex(
     return toSearchEntry(kind, detail, pokemonForms);
   });
 
-  const searchable = entries.filter((entry): entry is SearchEntry =>
-    Boolean(entry),
-  );
+  const searchable = entries.filter((entry): entry is SearchEntry => Boolean(entry));
 
   await writeCache(kind, searchable);
 
@@ -266,10 +261,7 @@ function toSearchEntry<K extends ResourceKind>(
   pokemonForms?: readonly PokemonFormProfile[],
 ): SearchEntry | undefined {
   const names = getLocalizedNames(detail.names, detail.name);
-  const pinyinFields = buildPinyinFields(
-    names.chineseSimplified,
-    names.chineseTraditional,
-  );
+  const pinyinFields = buildPinyinFields(names.chineseSimplified, names.chineseTraditional);
   const common = {
     id: detail.id,
     kind,
@@ -288,9 +280,7 @@ function toSearchEntry<K extends ResourceKind>(
           firstGenusText(pokemon.genera, "en") ||
           "Pokemon species",
       ),
-      meta:
-        defaultForm?.meta ??
-        speciesMeta(pokemon),
+      meta: defaultForm?.meta ?? speciesMeta(pokemon),
       forms: pokemonForms,
       stats: defaultForm?.stats,
       artworkUrl: defaultForm?.artworkUrl ?? pokemonArtworkUrl(pokemon.id),
@@ -319,9 +309,7 @@ function toSearchEntry<K extends ResourceKind>(
     const item = detail as ItemDetail;
     return {
       ...common,
-      summary:
-        firstEffectText(item.effect_entries) ||
-        `${titleize(item.category.name)} item`,
+      summary: firstEffectText(item.effect_entries) || `${titleize(item.category.name)} item`,
       meta: [
         titleize(item.category.name),
         `Cost ${item.cost}`,
@@ -339,10 +327,9 @@ function toSearchEntry<K extends ResourceKind>(
         firstEffectText(ability.effect_entries) ||
         cleanText(firstLanguageText(ability.flavor_text_entries, "en")) ||
         "Pokemon ability",
-      meta: [
-        titleize(ability.generation?.name),
-        `${ability.pokemon.length} Pokemon`,
-      ].filter(isPresent),
+      meta: [titleize(ability.generation?.name), `${ability.pokemon.length} Pokemon`].filter(
+        isPresent,
+      ),
     };
   }
 
@@ -355,9 +342,7 @@ function toSearchEntry<K extends ResourceKind>(
     ...common,
     summary: `${type.pokemon.length} Pokemon and ${type.moves.length} moves use this type.`,
     meta: [
-      type.move_damage_class
-        ? `${titleize(type.move_damage_class.name)} class`
-        : "Type",
+      type.move_damage_class ? `${titleize(type.move_damage_class.name)} class` : "Type",
       `${type.pokemon.length} Pokemon`,
       `${type.moves.length} moves`,
     ],
@@ -366,10 +351,7 @@ function toSearchEntry<K extends ResourceKind>(
   };
 }
 
-function getLocalizedNames(
-  names: readonly LanguageName[],
-  fallback: string,
-): LocalizedNames {
+function getLocalizedNames(names: readonly LanguageName[], fallback: string): LocalizedNames {
   return {
     english: nameForLanguage(names, ["en"]) || titleize(fallback) || fallback,
     chineseSimplified: nameForLanguage(names, ["zh-Hans", "zh-hans"]),
@@ -378,10 +360,7 @@ function getLocalizedNames(
   };
 }
 
-function nameForLanguage(
-  names: readonly LanguageName[],
-  languageCodes: readonly string[],
-): string {
+function nameForLanguage(names: readonly LanguageName[], languageCodes: readonly string[]): string {
   for (const languageCode of languageCodes) {
     const match = names.find((entry) => entry.language.name === languageCode);
 
@@ -397,22 +376,14 @@ function firstLanguageText(
   entries: readonly FlavorText[] | undefined,
   languageCode: string,
 ): string {
-  return (
-    entries?.find((entry) => entry.language.name === languageCode)?.flavor_text ??
-    ""
-  );
+  return entries?.find((entry) => entry.language.name === languageCode)?.flavor_text ?? "";
 }
 
-function firstGenusText(
-  entries: readonly GenusText[] | undefined,
-  languageCode: string,
-): string {
+function firstGenusText(entries: readonly GenusText[] | undefined, languageCode: string): string {
   return entries?.find((entry) => entry.language.name === languageCode)?.genus ?? "";
 }
 
-function firstEffectText(
-  entries: readonly VerboseEffect[] | undefined,
-): string {
+function firstEffectText(entries: readonly VerboseEffect[] | undefined): string {
   const effect = entries?.find((entry) => entry.language.name === "en");
   return cleanText(effect?.short_effect || effect?.effect || "");
 }
@@ -493,9 +464,7 @@ async function mapConcurrent<Input, Output>(
     }
   }
 
-  await Promise.all(
-    Array.from({ length: Math.min(concurrency, items.length) }, () => worker()),
-  );
+  await Promise.all(Array.from({ length: Math.min(concurrency, items.length) }, () => worker()));
 
   return output;
 }
@@ -529,10 +498,7 @@ async function readCache(kind: ResourceKind): Promise<readonly SearchEntry[] | u
   }
 }
 
-async function writeCache(
-  kind: ResourceKind,
-  entries: readonly SearchEntry[],
-): Promise<void> {
+async function writeCache(kind: ResourceKind, entries: readonly SearchEntry[]): Promise<void> {
   const envelope: CacheEnvelope = {
     version: CACHE_VERSION,
     savedAt: Date.now(),
@@ -550,16 +516,11 @@ function cacheKey(kind: ResourceKind): string {
   return `poke-translate:${CACHE_VERSION}:${kind}`;
 }
 
-async function getCachedEnvelope(
-  kind: ResourceKind,
-): Promise<CacheEnvelope | undefined> {
+async function getCachedEnvelope(kind: ResourceKind): Promise<CacheEnvelope | undefined> {
   return withCacheStore("readonly", (store) => store.get(cacheKey(kind)));
 }
 
-async function setCachedEnvelope(
-  kind: ResourceKind,
-  envelope: CacheEnvelope,
-): Promise<void> {
+async function setCachedEnvelope(kind: ResourceKind, envelope: CacheEnvelope): Promise<void> {
   await withCacheStore("readwrite", (store) => store.put(envelope, cacheKey(kind)));
 }
 
@@ -583,8 +544,7 @@ function withCacheStore<T>(
     };
 
     dbRequest.onerror = () => reject(dbRequest.error);
-    dbRequest.onblocked = () =>
-      reject(new Error("IndexedDB cache upgrade is blocked."));
+    dbRequest.onblocked = () => reject(new Error("IndexedDB cache upgrade is blocked."));
     dbRequest.onsuccess = () => {
       const db = dbRequest.result;
       const transaction = db.transaction(CACHE_STORE_NAME, mode);
@@ -625,10 +585,7 @@ function pokemonArtworkUrl(id: number): string {
 }
 
 function pokemonArtworkUrlFromCore(core: PokemonCoreDetail): string {
-  return (
-    core.sprites.other?.["official-artwork"]?.front_default ??
-    pokemonArtworkUrl(core.id)
-  );
+  return core.sprites.other?.["official-artwork"]?.front_default ?? pokemonArtworkUrl(core.id);
 }
 
 function pokemonFormMeta(core: PokemonCoreDetail): readonly string[] {
@@ -647,19 +604,13 @@ function speciesMeta(species: PokemonSpeciesDetail): readonly string[] {
   ].filter(isPresent);
 }
 
-function formDisplayName(
-  speciesName: string,
-  formName: string,
-  isDefault: boolean,
-): string {
+function formDisplayName(speciesName: string, formName: string, isDefault: boolean): string {
   if (isDefault || formName === speciesName) {
     return "Default";
   }
 
   const prefix = `${speciesName}-`;
-  const formOnly = formName.startsWith(prefix)
-    ? formName.slice(prefix.length)
-    : formName;
+  const formOnly = formName.startsWith(prefix) ? formName.slice(prefix.length) : formName;
 
   return titleize(formOnly) || titleize(formName) || formName;
 }
@@ -681,9 +632,7 @@ function toPokemonStats(stats: readonly PokemonApiStat[]): readonly PokemonStat[
   }));
 }
 
-function toPokemonTypes(
-  types: readonly PokemonTypeSlot[],
-): readonly PokemonTypeProfile[] {
+function toPokemonTypes(types: readonly PokemonTypeSlot[]): readonly PokemonTypeProfile[] {
   return types
     .slice()
     .sort((first, second) => first.slot - second.slot)
@@ -723,7 +672,10 @@ function resourceIdFromUrl(url: string): number {
 }
 
 function cleanText(value: string): string {
-  return value.replace(/\s+/g, " ").replace(/\$effect_chance/g, "effect chance").trim();
+  return value
+    .replace(/\s+/g, " ")
+    .replace(/\$effect_chance/g, "effect chance")
+    .trim();
 }
 
 function titleize(value: string | undefined): string | undefined {

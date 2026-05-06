@@ -5,10 +5,7 @@ import type { SearchEntry, SearchHit } from "../types";
 const NON_SEARCHABLE = /[^\p{Letter}\p{Number}]+/gu;
 
 export function normalizeSearchText(value: string): string {
-  return value
-    .normalize("NFKC")
-    .toLocaleLowerCase()
-    .replace(NON_SEARCHABLE, "");
+  return value.normalize("NFKC").toLocaleLowerCase().replace(NON_SEARCHABLE, "");
 }
 
 export function toPinyinText(value: string): string {
@@ -126,8 +123,7 @@ function scoreField(field: string, query: string, weight: number): number {
 }
 
 function compareEntries(first: SearchEntry, second: SearchEntry): number {
-  const kindDelta =
-    RESOURCE_ORDER.indexOf(first.kind) - RESOURCE_ORDER.indexOf(second.kind);
+  const kindDelta = RESOURCE_ORDER.indexOf(first.kind) - RESOURCE_ORDER.indexOf(second.kind);
 
   if (kindDelta !== 0) {
     return kindDelta;

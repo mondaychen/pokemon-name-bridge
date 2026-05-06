@@ -3,12 +3,7 @@ import type { CSSProperties, ReactElement } from "react";
 import { RESOURCE_CONFIG_BY_KIND, RESOURCE_CONFIGS } from "./data/resources";
 import { clearSearchCache, loadSearchIndex } from "./lib/pokeapi";
 import { searchEntries } from "./lib/search";
-import type {
-  ResourceKind,
-  ResourceLoadState,
-  SearchEntry,
-  SearchHit,
-} from "./types";
+import type { ResourceKind, ResourceLoadState, SearchEntry, SearchHit } from "./types";
 
 const INITIAL_STATE: ResourceLoadState = {
   status: "idle",
@@ -20,17 +15,13 @@ const DEFAULT_STATES = Object.fromEntries(
   RESOURCE_CONFIGS.map((config) => [config.kind, INITIAL_STATE]),
 ) as Record<ResourceKind, ResourceLoadState>;
 
-const DEFAULT_SELECTED = new Set<ResourceKind>(
-  RESOURCE_CONFIGS.map((config) => config.kind),
-);
+const DEFAULT_SELECTED = new Set<ResourceKind>(RESOURCE_CONFIGS.map((config) => config.kind));
 
 export function App(): ReactElement {
   const [query, setQuery] = useState("");
   const [entries, setEntries] = useState<readonly SearchEntry[]>([]);
-  const [states, setStates] =
-    useState<Record<ResourceKind, ResourceLoadState>>(DEFAULT_STATES);
-  const [selectedKinds, setSelectedKinds] =
-    useState<ReadonlySet<ResourceKind>>(DEFAULT_SELECTED);
+  const [states, setStates] = useState<Record<ResourceKind, ResourceLoadState>>(DEFAULT_STATES);
+  const [selectedKinds, setSelectedKinds] = useState<ReadonlySet<ResourceKind>>(DEFAULT_SELECTED);
 
   useEffect(() => {
     let cancelled = false;
@@ -58,10 +49,7 @@ export function App(): ReactElement {
               status: "error",
               loaded: 0,
               total: 0,
-              message:
-                error instanceof Error
-                  ? error.message
-                  : "Unable to load this category.",
+              message: error instanceof Error ? error.message : "Unable to load this category.",
             },
           }));
         }
@@ -84,23 +72,12 @@ export function App(): ReactElement {
     [entries, selectedKinds],
   );
 
-  const hits = useMemo(
-    () => searchEntries(selectedEntries, query),
-    [query, selectedEntries],
-  );
+  const hits = useMemo(() => searchEntries(selectedEntries, query), [query, selectedEntries]);
 
   const totals = useMemo(() => {
-    const ready = Object.values(states).filter(
-      (state) => state.status === "ready",
-    ).length;
-    const loaded = Object.values(states).reduce(
-      (sum, state) => sum + state.loaded,
-      0,
-    );
-    const total = Object.values(states).reduce(
-      (sum, state) => sum + state.total,
-      0,
-    );
+    const ready = Object.values(states).filter((state) => state.status === "ready").length;
+    const loaded = Object.values(states).reduce((sum, state) => sum + state.loaded, 0);
+    const total = Object.values(states).reduce((sum, state) => sum + state.total, 0);
 
     return { ready, loaded, total };
   }, [states]);
@@ -142,11 +119,7 @@ export function App(): ReactElement {
           <div className="header-status">
             <div className="status-grid">
               {RESOURCE_CONFIGS.map((config) => (
-                <LoadStatus
-                  key={config.kind}
-                  label={config.label}
-                  state={states[config.kind]}
-                />
+                <LoadStatus key={config.kind} label={config.label} state={states[config.kind]} />
               ))}
             </div>
             <div className="header-actions">
@@ -195,15 +168,13 @@ export function App(): ReactElement {
 
         <section className="results" aria-live="polite">
           {hits.length > 0 ? (
-            hits.map((hit) => (
-              <ResultCard hit={hit} key={`${hit.entry.kind}-${hit.entry.id}`} />
-            ))
+            hits.map((hit) => <ResultCard hit={hit} key={`${hit.entry.kind}-${hit.entry.id}`} />)
           ) : (
             <div className="empty-state">
               <strong>No matches yet</strong>
               <span>
-                Try fewer letters, a Chinese character, pinyin without tones, or
-                enable more categories.
+                Try fewer letters, a Chinese character, pinyin without tones, or enable more
+                categories.
               </span>
             </div>
           )}
@@ -219,8 +190,7 @@ interface LoadStatusProps {
 }
 
 function LoadStatus({ label, state }: LoadStatusProps): ReactElement {
-  const progress =
-    state.total > 0 ? Math.min(100, (state.loaded / state.total) * 100) : 0;
+  const progress = state.total > 0 ? Math.min(100, (state.loaded / state.total) * 100) : 0;
 
   return (
     <div className="load-status" data-state={state.status}>
@@ -246,8 +216,7 @@ function ResultCard({ hit }: ResultCardProps): ReactElement {
   const [activeFormName, setActiveFormName] = useState(
     forms.find((form) => form.isDefault)?.apiName ?? forms[0]?.apiName ?? "",
   );
-  const activeForm =
-    forms.find((form) => form.apiName === activeFormName) ?? forms[0];
+  const activeForm = forms.find((form) => form.apiName === activeFormName) ?? forms[0];
   const artworkUrl = activeForm?.artworkUrl ?? entry.artworkUrl;
   const meta = activeForm?.meta ?? entry.meta;
   const stats = activeForm?.stats ?? entry.stats;
@@ -257,10 +226,7 @@ function ResultCard({ hit }: ResultCardProps): ReactElement {
   const wikiLinks = wikiLinksFor(entry);
 
   return (
-    <article
-      className="result-card"
-      style={{ "--accent": config.accent } as CSSProperties}
-    >
+    <article className="result-card" style={{ "--accent": config.accent } as CSSProperties}>
       <div className="art-column" aria-hidden="true">
         <div className="art-slot">
           {artworkUrl ? (
@@ -280,7 +246,9 @@ function ResultCard({ hit }: ResultCardProps): ReactElement {
       <div className="result-body">
         <div className="result-heading">
           <div>
-            <span className="kind-label">{config.shortLabel} #{entry.id}</span>
+            <span className="kind-label">
+              {config.shortLabel} #{entry.id}
+            </span>
             <div className="title-row">
               <h2>{entry.chineseSimplified || entry.english}</h2>
               <WikiLinks links={wikiLinks} />
@@ -448,10 +416,7 @@ function WikiLinks({ links }: WikiLinksProps): ReactElement {
 }
 
 function placeholderLabel(entry: SearchEntry, fallback: string): string {
-  if (
-    (entry.kind === "move" || entry.kind === "ability") &&
-    entry.chineseSimplified
-  ) {
+  if ((entry.kind === "move" || entry.kind === "ability") && entry.chineseSimplified) {
     return Array.from(entry.chineseSimplified)[0] ?? fallback.slice(0, 2);
   }
 
@@ -462,8 +427,7 @@ function wikiLinksFor(entry: SearchEntry): {
   readonly bulbapedia: string;
   readonly chineseWiki: string;
 } {
-  const chineseName =
-    entry.chineseSimplified || entry.chineseTraditional || entry.english;
+  const chineseName = entry.chineseSimplified || entry.chineseTraditional || entry.english;
 
   return {
     bulbapedia: bulbapediaUrl(entry),
@@ -472,8 +436,7 @@ function wikiLinksFor(entry: SearchEntry): {
 }
 
 function bulbapediaUrl(entry: SearchEntry): string {
-  const title =
-    entry.kind === "move" ? `${entry.english} (move)` : entry.english;
+  const title = entry.kind === "move" ? `${entry.english} (move)` : entry.english;
 
   return `https://bulbapedia.bulbagarden.net/wiki/${wikiPath(title)}`;
 }
@@ -487,9 +450,7 @@ function chineseWikiUrl(kind: SearchEntry["kind"], chineseName: string): string 
     type: "（属性）",
   };
 
-  return `https://wiki.52poke.com/wiki/${wikiPath(
-    `${chineseName}${suffixByKind[kind]}`,
-  )}`;
+  return `https://wiki.52poke.com/wiki/${wikiPath(`${chineseName}${suffixByKind[kind]}`)}`;
 }
 
 function wikiPath(title: string): string {
