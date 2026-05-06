@@ -12,6 +12,7 @@
   font-synthesis: none;
   line-height: 1.5;
   text-rendering: optimizeLegibility;
+  font-variant-numeric: tabular-nums;
 }
 
 * {

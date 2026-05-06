@@ -124,11 +124,9 @@ export function App(): ReactElement {
             </div>
             <div className="header-actions">
               <span className="header-total">{indexingSummary}</span>
-              {totals.ready === RESOURCE_CONFIGS.length ? (
-                <button className="ghost-button" type="button" onClick={refreshData}>
-                  Refresh data
-                </button>
-              ) : null}
+              <button className="ghost-button" type="button" onClick={refreshData}>
+                Refresh data
+              </button>
             </div>
           </div>
         </div>
